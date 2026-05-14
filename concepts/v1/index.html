@@ -536,11 +536,9 @@ resizeStage();
     var lineH = pinH[Math.floor(rand() * pinH.length)];
     var height = 72 + lineH + 12; /* circle + line + dot */
     pin.style.height = height + 'px';
-    /* Anchor pin DOT onto the city skyline (rooftops), NOT the water below.
-       Mask is 399px tall; horizon sits roughly at lens Y ~280, building tops
-       around Y ~140. Place dot bottom in lens Y 150-220 so pins "stick" into
-       buildings, not water. */
-    var bottomFromMaskBottom = 180 + rand() * 70;  /* dot bottom at lens Y 149-219 */
+    /* Anchor pin bottom 70-100px above mask bottom — raised by 40px from the
+       original 30-60 to lift dots off the water onto the waterline/lower buildings. */
+    var bottomFromMaskBottom = 70 + rand() * 30;  /* dot bottom at lens Y 299-329 */
     pin.style.top  = (399 - height - bottomFromMaskBottom) + 'px';
     pin.style.left = (side * halfW + xWithinHalf) + 'px';
 
