@@ -162,8 +162,8 @@ html, body {
 }
 
 .pin__circle img {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   display: block;
   pointer-events: none;
   user-select: none;
@@ -350,7 +350,7 @@ html, body {
 
 .city-silhouette .bar {
   width: 10px;
-  background: rgba(121,251,186,0.18);
+  background: rgba(121,251,186,0.30);
   flex: 0 0 10px;
 }
 
@@ -508,7 +508,7 @@ resizeStage();
     return seed / 233280;
   }
 
-  var pinCount = 34;
+  var pinCount = 14;
   /* Distribute evenly across the half-width with jitter */
   var spacing = halfW / pinCount;
 
@@ -518,10 +518,9 @@ resizeStage();
     var lineH = pinH[Math.floor(rand() * pinH.length)];
     var height = 56 + lineH + 12; /* circle + line + dot */
     pin.style.height = height + 'px';
-    /* Bottom of pin sits in the lower-third of the mask (mask is 399 tall);
-       randomize Y so bottoms aren't all level — like the city silhouette. */
-    var bottomOffset = 60 + rand() * 200; /* offset from top of mask */
-    pin.style.top  = bottomOffset + 'px';
+    /* Anchor pin BOTTOM to the lower band of the lens — dot ends ~30-60px from mask bottom */
+    var bottomFromMaskBottom = 30 + rand() * 30;  /* dot sits 30-60px above mask bottom */
+    pin.style.top  = (399 - height - bottomFromMaskBottom) + 'px';
     pin.style.left = (side * halfW + xWithinHalf) + 'px';
 
     var circle = document.createElement('div');
