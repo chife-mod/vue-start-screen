@@ -226,32 +226,15 @@ html, body {
   left: 369px;
   width: 543px;
   height: 280px;
-  display: grid;
-  place-items: center;
-  font-family: "Helvetica Neue", "Inter", sans-serif;
-  font-weight: 100;
-  font-size: 239px;
-  letter-spacing: 64.53px;
-  line-height: 1;
-  white-space: nowrap;
-  user-select: none;
-  /* shift to compensate letter-spacing pushing trailing space */
-  text-indent: 32px;
-}
-
-/* U is rendered via VUE-Logo.png overlay (real neon glow) — hide the text U so it doesn't double up */
-.vue-wordmark .u {
-  color: transparent;
-}
-
-.vue-wordmark .u-glow {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   pointer-events: none;
   user-select: none;
+}
+
+.vue-wordmark img {
   display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .subtitle {
@@ -408,6 +391,11 @@ html, body {
     <!-- 4. Top: EP logo -->
     <div class="ep-logo">
       <img src="../../assets/EP_Logo.svg" alt="EnergyPlus">
+    </div>
+
+    <!-- 5. VUE logo (PNG, neon U) -->
+    <div class="vue-wordmark">
+      <img src="../../assets/VUE-Logo.png" alt="VUE">
     </div>
 
     <!-- 6. Subtitle + tagline -->
