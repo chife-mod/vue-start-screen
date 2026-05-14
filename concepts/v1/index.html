@@ -66,24 +66,28 @@ html, body {
 .panorama-track {
   position: absolute;
   inset: 0;
-  width: 200%;
+  width: 8340px; /* 4 image copies: [O][M][O][M], M = scaleX(-1) */
   height: 100%;
   display: flex;
-  animation: panorama-scroll 75s linear infinite;
+  animation: panorama-scroll 150s linear infinite;
   will-change: transform;
 }
 
 .panorama-track img {
-  width: 50%;
+  width: 2085px;
   height: 100%;
   object-fit: cover;
   display: block;
-  flex: 0 0 50%;
+  flex: 0 0 2085px;
 }
+
+/* Every other copy is horizontally flipped — adjacent edges become mirror
+   reflections of the same column, so the seam disappears completely. */
+.panorama-track img.flip { transform: scaleX(-1); }
 
 @keyframes panorama-scroll {
   from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-50%, 0, 0); }
+  to   { transform: translate3d(-4170px, 0, 0); } /* one [O][M] unit */
 }
 
 /* Top + bottom gradient fade (from Figma linear-gradient overlay on the panorama) */
@@ -115,22 +119,22 @@ html, body {
           mask-repeat: no-repeat;
 }
 
-/* Pins move in LOCKSTEP with the panorama image: track is 2× panorama image
-   width (4170 = 2×2085), scrolls -2085 in 75s — same px/s as panorama-track.
-   This means each pin sits over a CONSTANT panorama image X position. */
+/* Pins move in LOCKSTEP with the panorama. Track is 2× the panorama unit
+   ([O][M] = 4170 wide × 2 = 8340), scrolls -4170 in 150s — same px/s as
+   panorama-track. Each pin sits over a CONSTANT panorama-track X over time. */
 .pins-track {
   position: absolute;
   top: 0;
   left: 0;
-  width: 4170px;
+  width: 8340px;
   height: 100%;
-  animation: pins-scroll 75s linear infinite;
+  animation: pins-scroll 150s linear infinite;
   will-change: transform;
 }
 
 @keyframes pins-scroll {
   from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-2085px, 0, 0); }
+  to   { transform: translate3d(-4170px, 0, 0); }
 }
 
 .pin {
@@ -397,11 +401,15 @@ html, body {
 <div class="stage-wrap">
   <div class="stage" id="stage">
 
-    <!-- 1. Panorama -->
+    <!-- 1. Panorama — 4 copies alternating original / horizontally flipped.
+         The seam between adjacent copies is invisible because each junction
+         is a mirror of the same edge column. -->
     <div class="panorama-layer">
       <div class="panorama-track">
         <img src="../../assets/Panorama.webp" alt="">
+        <img class="flip" src="../../assets/Panorama.webp" alt="" aria-hidden="true">
         <img src="../../assets/Panorama.webp" alt="" aria-hidden="true">
+        <img class="flip" src="../../assets/Panorama.webp" alt="" aria-hidden="true">
       </div>
     </div>
     <div class="panorama-fade"></div>
@@ -500,11 +508,10 @@ resizeStage();
 /* ----- Pins generation ----- */
 (function buildPins () {
   var track   = document.getElementById('pinsTrack');
-  /* Track is 4170 wide = 2× panorama image width (2085). Distribute pins across
-     0..2085 (one panorama image worth), DUPLICATE at 2085..4170 for seamless loop.
-     Track scrolls -2085 in 75s, matching panorama exactly → pins stay locked to
-     panorama, so each circle's blurred bg-position is constant in time. */
-  var halfW   = 2085;
+  /* Track is 8340 wide = 2× one [O][M] unit (each 4170). Distribute pins across
+     0..4170, DUPLICATE at 4170..8340 for seamless loop. Track scrolls -4170 in
+     150s, matching panorama exactly → pins stay locked to panorama. */
+  var halfW   = 4170;
   var pinH    = [12, 25, 38, 51, 64, 77, 90, 103];
   var icons   = [
     'shield-check', 'building-2', 'briefcase-business',
@@ -519,7 +526,7 @@ resizeStage();
     return seed / 233280;
   }
 
-  var pinCount = 14;
+  var pinCount = 52; /* density unchanged: ~14 pins visible at any time in the 1126.897-wide lens viewport */
   /* Distribute evenly across the half-width with jitter */
   var spacing = halfW / pinCount;
 
@@ -543,17 +550,16 @@ resizeStage();
     circle.style.animationDuration = dur + 's';
 
     /* Blurred panorama bg — fakes "backdrop-blur" reliably even inside masks.
-       Position the panorama so the spot directly under the pin lands at the
-       circle's center (36,36). Pin's stage Y = 563 + pinTop; panorama image
-       starts at stage Y=320, so panorama Y under pin = 243 + pinTop.
-       Pin's stage X = 76.05 + (side*halfW + xWithinHalf) − panoramaScrollOffset,
-       but since pins-track now scrolls in lockstep with panorama, that simplifies
-       to constant panorama X = 872.05 + xWithinHalf (mod 2085 wraps via repeat-x). */
-    var panX = 872.05 + xWithinHalf;
+       Position the panorama image (2085×885) so the spot under the pin lands
+       at the circle's CENTER. Center of circle in blur-bg coords is (56, 56)
+       because blur-bg has inset:-20 (shifts circle (36,36) center to 56,56).
+       Modulo 2085 wraps long-track pin positions into the single image. */
+    var panTrackX = 872.05 + xWithinHalf;     /* X on the [O][M][O][M] track */
+    var panImageX = panTrackX % 2085;         /* X within a single image */
     var panY = 243 + (399 - height - bottomFromMaskBottom);
     var bg = document.createElement('div');
     bg.className = 'pin__blur-bg';
-    bg.style.backgroundPosition = (36 - panX - 20) + 'px ' + (36 - panY - 20) + 'px';
+    bg.style.backgroundPosition = (56 - panImageX) + 'px ' + (56 - panY) + 'px';
     circle.appendChild(bg);
 
     var iconName = icons[Math.floor(rand() * icons.length)];
