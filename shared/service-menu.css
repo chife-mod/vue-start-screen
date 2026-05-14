@@ -1,0 +1,68 @@
+/* Floating chip navigator — bottom-right corner. Reads config from window.PREVIEW_* globals. */
+.service-menu {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(8, 24, 22, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(121, 251, 186, 0.18);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+}
+
+.service-menu a,
+.service-menu .service-menu__current {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: background 120ms ease, color 120ms ease;
+  white-space: nowrap;
+}
+
+.service-menu a:hover {
+  background: rgba(121, 251, 186, 0.12);
+  color: #ffffff;
+}
+
+.service-menu .service-menu__current {
+  background: rgba(121, 251, 186, 0.18);
+  color: #6ffbb5;
+}
+
+.service-menu .service-menu__home {
+  color: rgba(255, 255, 255, 0.55);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px 0 0 999px;
+  padding-right: 14px;
+  margin-right: 4px;
+}
+
+.service-menu .service-menu__home:hover {
+  color: #ffffff;
+  background: transparent;
+}
+
+@media (max-width: 480px) {
+  .service-menu {
+    bottom: 12px;
+    right: 12px;
+    font-size: 11px;
+  }
+  .service-menu a,
+  .service-menu .service-menu__current {
+    padding: 5px 9px;
+  }
+}

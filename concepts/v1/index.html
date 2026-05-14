@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VUE — Concept v1 (Animated)</title>
+<link rel="stylesheet" href="../../shared/service-menu.css">
+<style>
+:root {
+  --bg: #021617;
+  --green: #6ffbb5;
+  --green-soft: #79fbba;
+  --yellow: #ffec8b;
+  --stage-w: 1280px;
+  --stage-h: 1280px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: #fff;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+
+/* Viewport-fitting stage: scales 1280x1280 to whatever viewport we have, preserving aspect ratio. */
+.stage-wrap {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.stage {
+  position: relative;
+  width: var(--stage-w);
+  height: var(--stage-h);
+  background: var(--bg);
+  transform-origin: center center;
+  /* dynamic scale set in JS based on viewport */
+  overflow: hidden;
+}
+
+/* ---- LAYERS (back to front) ---- */
+
+/* 1. Panorama — seamless infinite horizontal loop.
+   Figma node: x=-796, y=320, w=2085, h=885.
+   We use two tracks side-by-side, animate -100% on the wrapper. */
+.panorama-layer {
+  position: absolute;
+  top: 320px;
+  left: -796px;
+  width: 2085px;
+  height: 885px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.panorama-track {
+  position: absolute;
+  inset: 0;
+  width: 200%;
+  height: 100%;
+  display: flex;
+  animation: panorama-scroll 75s linear infinite;
+  will-change: transform;
+}
+
+.panorama-track img {
+  width: 50%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  flex: 0 0 50%;
+}
+
+@keyframes panorama-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* Top + bottom gradient fade (from Figma linear-gradient overlay on the panorama) */
+.panorama-fade {
+  position: absolute;
+  top: 320px;
+  left: 0;
+  width: 1280px;
+  height: 885px;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgb(2,22,23) 0%, rgba(2,22,23,0) 25.8%),
+    linear-gradient(0deg,   rgb(2,22,23) 0%, rgba(2,22,23,0) 22.5%);
+}
+
+/* 2. Pins container — clipped by mask, sits between fade and glasses */
+.pins-layer {
+  position: absolute;
+  top: 563px;
+  left: 76.05px;
+  width: 1126.897px;
+  height: 399px;
+  pointer-events: none;
+  -webkit-mask-image: url(../../assets/Mask.png);
+          mask-image: url(../../assets/Mask.png);
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+}
+
+/* Pins move in lockstep with the panorama: the track is twice as wide as the
+   mask viewport (one full panorama width). Same speed / cycle as panorama. */
+.pins-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  animation: pins-scroll 75s linear infinite;
+  will-change: transform;
+}
+
+@keyframes pins-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+.pin {
+  position: absolute;
+  width: 74px;
+  /* height varies; set inline */
+  transform-origin: center bottom;
+}
+
+.pin__circle {
+  position: absolute;
+  top: 0;
+  left: 9px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(121, 251, 186, 0.43);
+  border: 1px solid rgba(121, 251, 186, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: grid;
+  place-items: center;
+  animation: pin-float 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes pin-float {
+  0%, 100% { transform: translate3d(0, -3px, 0); }
+  50%      { transform: translate3d(0, 5px, 0); }
+}
+
+.pin__circle svg {
+  width: 28px;
+  height: 28px;
+}
+
+.pin__line {
+  position: absolute;
+  top: 56px;
+  left: 36px;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(121,251,186,0.85) 0%, rgba(121,251,186,0.3) 100%);
+}
+
+.pin__dot {
+  position: absolute;
+  left: 31px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--green-soft);
+  box-shadow: 0 0 8px rgba(121,251,186,0.7);
+}
+
+/* 3. Glasses + Reflections — overlay the lenses, sit on top of pins */
+.glasses-img,
+.reflections-img {
+  position: absolute;
+  top: 563px;
+  left: 76.05px;
+  width: 1126.897px;
+  height: 399px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.reflections-img {
+  mix-blend-mode: screen;
+  opacity: 0.95;
+}
+
+/* 4. STATIC TEXT + LOGOS */
+
+.ep-logo {
+  position: absolute;
+  top: 71px;
+  left: 550px;
+  width: 179.38px;
+  height: 64px;
+}
+
+.ep-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.vue-wordmark {
+  position: absolute;
+  top: 145px;
+  left: 369px;
+  width: 543px;
+  height: 280px;
+  display: grid;
+  place-items: center;
+  font-family: "Helvetica Neue", "Inter", sans-serif;
+  font-weight: 100;
+  font-size: 239px;
+  letter-spacing: 64.53px;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  /* shift to compensate letter-spacing pushing trailing space */
+  text-indent: 32px;
+}
+
+.vue-wordmark .u {
+  color: var(--green);
+  text-shadow:
+    0 0 18px rgba(121,251,186,0.7),
+    0 0 38px rgba(121,251,186,0.45);
+}
+
+.subtitle {
+  position: absolute;
+  top: 415px;
+  left: 370px;
+  width: 542px;
+  height: 25px;
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  letter-spacing: 5.6px;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.tagline {
+  position: absolute;
+  top: 468px;
+  left: 435px;
+  width: 411px;
+  height: 19px;
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 16px;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.4px;
+}
+
+/* Brand strip — 5 icon+text pairs */
+.brand-strip {
+  position: absolute;
+  top: 1099px;
+  left: 111px;
+  width: 1041px;
+  height: 40px;
+  display: flex;
+  gap: 33px;
+  align-items: center;
+}
+
+.brand-strip .brand-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-strip svg {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+}
+
+.brand-strip svg path { stroke: var(--yellow); }
+
+.brand-strip span {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  letter-spacing: 4.48px;
+  color: var(--yellow);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Bottom city silhouette + footer */
+.city-silhouette {
+  position: absolute;
+  top: 1177px;
+  left: -8px;
+  width: 1297px;
+  height: 103px;
+  display: flex;
+  gap: 1px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.city-silhouette .bar {
+  width: 10px;
+  background: rgba(121,251,186,0.18);
+  flex: 0 0 10px;
+}
+
+.footer {
+  position: absolute;
+  top: 1148px;
+  left: 0;
+  width: 1278px;
+  height: 132px;
+  background: linear-gradient(180deg, rgba(2,22,23,0.6) 0%, rgba(2,22,23,1) 60%);
+}
+
+.footer-text {
+  position: absolute;
+  top: 1205px;
+  height: 19px;
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.65);
+  text-transform: uppercase;
+}
+
+.footer-left  { left: 56px;   width: 206px; }
+.footer-right { left: 1039px; width: 177px; text-align: right; }
+
+</style>
+</head>
+<body>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+
+    <!-- 1. Panorama -->
+    <div class="panorama-layer">
+      <div class="panorama-track">
+        <img src="../../assets/figma/panorama.webp" alt="">
+        <img src="../../assets/figma/panorama.webp" alt="" aria-hidden="true">
+      </div>
+    </div>
+    <div class="panorama-fade"></div>
+
+    <!-- 2. Pins (clipped by mask) -->
+    <div class="pins-layer">
+      <div class="pins-track" id="pinsTrack"></div>
+    </div>
+
+    <!-- 3. Glasses + Reflections -->
+    <img class="glasses-img"     src="../../assets/Glasses.webp"     alt="">
+    <img class="reflections-img" src="../../assets/Reflections.png" alt="">
+
+    <!-- 4. Top: EP logo -->
+    <div class="ep-logo">
+      <img src="../../assets/figma/energyplus-logo.svg" alt="EnergyPlus">
+    </div>
+
+    <!-- 5. VUE wordmark -->
+    <div class="vue-wordmark">
+      <span class="v">V</span><span class="u">U</span><span class="e">E</span>
+    </div>
+
+    <!-- 6. Subtitle + tagline -->
+    <div class="subtitle">Building Intelligence Platform</div>
+    <div class="tagline">Your buildings. Your compliance. Your control.</div>
+
+    <!-- 7. Brand strip -->
+    <div class="brand-strip">
+      <div class="brand-item">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M10 12H14M10 8H14M14 21V18C14 17.4696 13.7893 16.9609 13.4142 16.5858C13.0391 16.2107 12.5304 16 12 16C11.4696 16 10.9609 16.2107 10.5858 16.5858C10.2107 16.9609 10 17.4696 10 18V21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10H4C3.46957 10 2.96086 10.2107 2.58579 10.5858C2.21071 10.9609 2 11.4696 2 12V19C2 19.5304 2.21071 20.0391 2.58579 20.4142C2.96086 20.7893 3.46957 21 4 21H20C20.5304 21 21.0391 20.7893 21.4142 20.4142C21.7893 20.0391 22 19.5304 22 19V9C22 8.46957 21.7893 7.96086 21.4142 7.58579C21.0391 7.21071 20.5304 7 20 7H18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 21V5C6 4.46957 6.21071 3.96086 6.58579 3.58579C6.96086 3.21071 7.46957 3 8 3H16C16.5304 3 17.0391 3.21071 17.4142 3.58579C17.7893 3.96086 18 4.46957 18 5V21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Portfolio</span>
+      </div>
+      <div class="brand-item">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20 13C20 18 16.5 20.5 12.34 21.95C12.1222 22.0238 11.8855 22.0203 11.67 21.94C7.5 20.5 4 18 4 13V5.99999C4 5.73478 4.10536 5.48042 4.29289 5.29289C4.48043 5.10535 4.73478 4.99999 5 4.99999C7 4.99999 9.5 3.79999 11.24 2.27999C11.4519 2.09899 11.7214 1.99954 12 1.99954C12.2786 1.99954 12.5481 2.09899 12.76 2.27999C14.51 3.80999 17 4.99999 19 4.99999C19.2652 4.99999 19.5196 5.10535 19.7071 5.29289C19.8946 5.48042 20 5.73478 20 5.99999V13Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12L11 14L15 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Compliance</span>
+      </div>
+      <div class="brand-item">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 12H12.01M16 6V4C16 3.46957 15.7893 2.96086 15.4142 2.58579C15.0391 2.21071 14.5304 2 14 2H10C9.46957 2 8.96086 2.21071 8.58579 2.58579C8.21071 2.96086 8 3.46957 8 4V6M22 13C19.0328 14.959 15.5555 16.0033 12 16.0033C8.44445 16.0033 4.96721 14.959 2 13" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 6H4C2.89543 6 2 6.89543 2 8V18C2 19.1046 2.89543 20 4 20H20C21.1046 20 22 19.1046 22 18V8C22 6.89543 21.1046 6 20 6Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Projects</span>
+      </div>
+      <div class="brand-item">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3.84995 8.62001C3.70399 7.96253 3.7264 7.27885 3.91511 6.63235C4.10381 5.98584 4.4527 5.39745 4.92942 4.92173C5.40614 4.446 5.99526 4.09835 6.64216 3.911C7.28905 3.72365 7.97278 3.70267 8.62995 3.85001C8.99166 3.28431 9.48995 2.81876 10.0789 2.49629C10.6678 2.17382 11.3285 2.00479 11.9999 2.00479C12.6714 2.00479 13.332 2.17382 13.921 2.49629C14.5099 2.81876 15.0082 3.28431 15.3699 3.85001C16.0281 3.70203 16.713 3.72292 17.3609 3.91072C18.0089 4.09852 18.5988 4.44715 19.0758 4.92416C19.5528 5.40117 19.9014 5.99108 20.0892 6.63901C20.277 7.28694 20.2979 7.97184 20.1499 8.63001C20.7156 8.99171 21.1812 9.49001 21.5037 10.079C21.8261 10.6679 21.9952 11.3286 21.9952 12C21.9952 12.6715 21.8261 13.3321 21.5037 13.9211C21.1812 14.51 20.7156 15.0083 20.1499 15.37C20.2973 16.0272 20.2763 16.7109 20.089 17.3578C19.9016 18.0047 19.554 18.5938 19.0782 19.0705C18.6025 19.5473 18.0141 19.8961 17.3676 20.0848C16.7211 20.2736 16.0374 20.296 15.3799 20.15C15.0187 20.7179 14.52 21.1854 13.9301 21.5093C13.3401 21.8332 12.678 22.0031 12.0049 22.0031C11.3319 22.0031 10.6698 21.8332 10.0798 21.5093C9.48987 21.1854 8.99119 20.7179 8.62995 20.15C7.97278 20.2973 7.28905 20.2764 6.64216 20.089C5.99526 19.9017 5.40614 19.554 4.92942 19.0783C4.4527 18.6026 4.10381 18.0142 3.91511 17.3677C3.7264 16.7212 3.70399 16.0375 3.84995 15.38C3.27991 15.0192 2.81036 14.5202 2.485 13.9292C2.15963 13.3383 1.98901 12.6746 1.98901 12C1.98901 11.3254 2.15963 10.6617 2.485 10.0708C2.81036 9.47983 3.27991 8.98076 3.84995 8.62001Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 8H10C9.46957 8 8.96086 8.21071 8.58579 8.58579C8.21071 8.96086 8 9.46957 8 10C8 10.5304 8.21071 11.0391 8.58579 11.4142C8.96086 11.7893 9.46957 12 10 12H14C14.5304 12 15.0391 12.2107 15.4142 12.5858C15.7893 12.9609 16 13.4696 16 14C16 14.5304 15.7893 15.0391 15.4142 15.4142C15.0391 15.7893 14.5304 16 14 16H8M12 18V6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Incentives</span>
+      </div>
+      <div class="brand-item">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M13 17V9M18 17V5M3 3V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H21M8 17V14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Insights</span>
+      </div>
+    </div>
+
+    <!-- 8. City silhouette + footer -->
+    <div class="city-silhouette" id="citySilhouette"></div>
+    <div class="footer"></div>
+    <div class="footer-text footer-left">energyplus.com</div>
+    <div class="footer-text footer-right">#ENJOYTHEVUE</div>
+
+  </div>
+</div>
+
+<!-- Hidden SVG sprite for pin icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M20 13C20 18 16.5 20.5 12.34 21.95C12.1222 22.0238 11.8855 22.0203 11.67 21.94C7.5 20.5 4 18 4 13V5.99999C4 5.73478 4.10536 5.48042 4.29289 5.29289C4.48043 5.10535 4.73478 4.99999 5 4.99999C7 4.99999 9.5 3.79999 11.24 2.27999C11.4519 2.09899 11.7214 1.99954 12 1.99954C12.2786 1.99954 12.5481 2.09899 12.76 2.27999C14.51 3.80999 17 4.99999 19 4.99999C19.2652 4.99999 19.5196 5.10535 19.7071 5.29289C19.8946 5.48042 20 5.73478 20 5.99999V13Z" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12L11 14L15 10" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-building-2" viewBox="0 0 24 24"><path d="M10 12H14M10 8H14M14 21V18C14 17.4696 13.7893 16.9609 13.4142 16.5858C13.0391 16.2107 12.5304 16 12 16C11.4696 16 10.9609 16.2107 10.5858 16.5858C10.2107 16.9609 10 17.4696 10 18V21" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10H4C3.46957 10 2.96086 10.2107 2.58579 10.5858C2.21071 10.9609 2 11.4696 2 12V19C2 19.5304 2.21071 20.0391 2.58579 20.4142C2.96086 20.7893 3.46957 21 4 21H20C20.5304 21 21.0391 20.7893 21.4142 20.4142C21.7893 20.0391 22 19.5304 22 19V9C22 8.46957 21.7893 7.96086 21.4142 7.58579C21.0391 7.21071 20.5304 7 20 7H18" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 21V5C6 4.46957 6.21071 3.96086 6.58579 3.58579C6.96086 3.21071 7.46957 3 8 3H16C16.5304 3 17.0391 3.21071 17.4142 3.58579C17.7893 3.96086 18 4.46957 18 5V21" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-briefcase-business" viewBox="0 0 24 24"><path d="M12 12H12.01M16 6V4C16 3.46957 15.7893 2.96086 15.4142 2.58579C15.0391 2.21071 14.5304 2 14 2H10C9.46957 2 8.96086 2.21071 8.58579 2.58579C8.21071 2.96086 8 3.46957 8 4V6M22 13C19.0328 14.959 15.5555 16.0033 12 16.0033C8.44445 16.0033 4.96721 14.959 2 13" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 6H4C2.89543 6 2 6.89543 2 8V18C2 19.1046 2.89543 20 4 20H20C21.1046 20 22 19.1046 22 18V8C22 6.89543 21.1046 6 20 6Z" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-badge-dollar-sign" viewBox="0 0 24 24"><path d="M3.84995 8.62001C3.70399 7.96253 3.7264 7.27885 3.91511 6.63235C4.10381 5.98584 4.4527 5.39745 4.92942 4.92173C5.40614 4.446 5.99526 4.09835 6.64216 3.911C7.28905 3.72365 7.97278 3.70267 8.62995 3.85001C8.99166 3.28431 9.48995 2.81876 10.0789 2.49629C10.6678 2.17382 11.3285 2.00479 11.9999 2.00479C12.6714 2.00479 13.332 2.17382 13.921 2.49629C14.5099 2.81876 15.0082 3.28431 15.3699 3.85001C16.0281 3.70203 16.713 3.72292 17.3609 3.91072C18.0089 4.09852 18.5988 4.44715 19.0758 4.92416C19.5528 5.40117 19.9014 5.99108 20.0892 6.63901C20.277 7.28694 20.2979 7.97184 20.1499 8.63001C20.7156 8.99171 21.1812 9.49001 21.5037 10.079C21.8261 10.6679 21.9952 11.3286 21.9952 12C21.9952 12.6715 21.8261 13.3321 21.5037 13.9211C21.1812 14.51 20.7156 15.0083 20.1499 15.37C20.2973 16.0272 20.2763 16.7109 20.089 17.3578C19.9016 18.0047 19.554 18.5938 19.0782 19.0705C18.6025 19.5473 18.0141 19.8961 17.3676 20.0848C16.7211 20.2736 16.0374 20.296 15.3799 20.15C15.0187 20.7179 14.52 21.1854 13.9301 21.5093C13.3401 21.8332 12.678 22.0031 12.0049 22.0031C11.3319 22.0031 10.6698 21.8332 10.0798 21.5093C9.48987 21.1854 8.99119 20.7179 8.62995 20.15C7.97278 20.2973 7.28905 20.2764 6.64216 20.089C5.99526 19.9017 5.40614 19.554 4.92942 19.0783C4.4527 18.6026 4.10381 18.0142 3.91511 17.3677C3.7264 16.7212 3.70399 16.0375 3.84995 15.38C3.27991 15.0192 2.81036 14.5202 2.485 13.9292C2.15963 13.3383 1.98901 12.6746 1.98901 12C1.98901 11.3254 2.15963 10.6617 2.485 10.0708C2.81036 9.47983 3.27991 8.98076 3.84995 8.62001Z" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 8H10C9.46957 8 8.96086 8.21071 8.58579 8.58579C8.21071 8.96086 8 9.46957 8 10C8 10.5304 8.21071 11.0391 8.58579 11.4142C8.96086 11.7893 9.46957 12 10 12H14C14.5304 12 15.0391 12.2107 15.4142 12.5858C15.7893 12.9609 16 13.4696 16 14C16 14.5304 15.7893 15.0391 15.4142 15.4142C15.0391 15.7893 14.5304 16 14 16H8M12 18V6" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chart-column-increasing" viewBox="0 0 24 24"><path d="M13 17V9M18 17V5M3 3V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H21M8 17V14" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-battery-charging" viewBox="0 0 24 24"><path d="M11 7L8 12H12L9 17M14.856 6H16C16.5304 6 17.0391 6.21071 17.4142 6.58579C17.7893 6.96086 18 7.46957 18 8V16C18 16.5304 17.7893 17.0391 17.4142 17.4142C17.0391 17.7893 16.5304 18 16 18H13.065M22 14V10M5.14 18H4C3.46957 18 2.96086 17.7893 2.58579 17.4142C2.21071 17.0391 2 16.5304 2 16V8C2 7.46957 2.21071 6.96086 2.58579 6.58579C2.96086 6.21071 3.46957 6 4 6H6.936" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-ev-charger" viewBox="0 0 24 24"><path d="M14 13H16C16.5304 13 17.0391 13.2107 17.4142 13.5858C17.7893 13.9609 18 14.4696 18 15V17C18 17.5304 18.2107 18.0391 18.5858 18.4142C18.9609 18.7893 19.4696 19 20 19C20.5304 19 21.0391 18.7893 21.4142 18.4142C21.7893 18.0391 22 17.5304 22 17V10.002C22.0002 9.73809 21.9482 9.47674 21.8469 9.23303C21.7457 8.98932 21.5972 8.76806 21.41 8.582L18 5M14 21V5C14 4.46957 13.7893 3.96086 13.4142 3.58579C13.0391 3.21071 12.5304 3 12 3H5C4.46957 3 3.96086 3.21071 3.58579 3.58579C3.21071 3.96086 3 4.46957 3 5V21M2 21H15M3 7H14" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 11L7 14H10L8 17" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M6 22C5.46957 22 4.96086 21.7893 4.58579 21.4142C4.21071 21.0391 4 20.5304 4 20V4C4 3.46957 4.21071 2.96086 4.58579 2.58579C4.96086 2.21072 5.46957 2 6 2H14C14.3166 1.99949 14.6301 2.06161 14.9225 2.18277C15.215 2.30394 15.4806 2.48176 15.704 2.706L19.292 6.294C19.5168 6.51751 19.6952 6.78335 19.8167 7.07616C19.9382 7.36898 20.0005 7.68297 20 8V20C20 20.5304 19.7893 21.0391 19.4142 21.4142C19.0391 21.7893 18.5304 22 18 22H6Z" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2V7C14 7.26522 14.1054 7.51957 14.2929 7.70711C14.4804 7.89464 14.7348 8 15 8H20M10 9H8M16 13H8M16 17H8" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-network" viewBox="0 0 24 24"><path d="M21 16H17C16.4477 16 16 16.4477 16 17V21C16 21.5523 16.4477 22 17 22H21C21.5523 22 22 21.5523 22 21V17C22 16.4477 21.5523 16 21 16Z" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 16H3C2.44772 16 2 16.4477 2 17V21C2 21.5523 2.44772 22 3 22H7C7.55228 22 8 21.5523 8 21V17C8 16.4477 7.55228 16 7 16Z" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2H10C9.44772 2 9 2.44772 9 3V7C9 7.55228 9.44772 8 10 8H14C14.5523 8 15 7.55228 15 7V3C15 2.44772 14.5523 2 14 2Z" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 16V13C5 12.7348 5.10536 12.4804 5.29289 12.2929C5.48043 12.1054 5.73478 12 6 12H18C18.2652 12 18.5196 12.1054 18.7071 12.2929C18.8946 12.4804 19 12.7348 19 13V16M12 12V8" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-square-activity" viewBox="0 0 24 24"><path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 12H15L13 17L11 7L9 12H7" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<!-- Service menu config -->
+<script>
+  window.PREVIEW_CONCEPTS = [
+    { id: 'v1', label: 'v1 Animated', href: '../v1/' },
+    { id: 'v2', label: 'v2 Static',   href: '../v2/' },
+    { id: 'v3', label: 'v3 Static',   href: '../v3/' }
+  ];
+  window.PREVIEW_CURRENT = 'v1';
+  window.PREVIEW_HOME    = '../../';
+</script>
+<script src="../../shared/service-menu.js" defer></script>
+
+<script>
+/* ----- Stage scaling to viewport ----- */
+function resizeStage () {
+  var stage = document.getElementById('stage');
+  if (!stage) return;
+  var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 1280);
+  stage.style.transform = 'scale(' + scale + ')';
+}
+window.addEventListener('resize', resizeStage);
+resizeStage();
+
+/* ----- City silhouette bars: replicate Figma 120 bars with the same height distribution ----- */
+(function buildCitySilhouette () {
+  var heights = [25,64,90,90,51,103,51,103,77,64,12,12,12,25,64,77,25,90,51,12,90,51,51,12,51,51,64,25,12,25,90,25,38,25,12,38,90,51,51,12,90,90,51,38,38,103,77,25,103,77,38,90,25,77,64,103,25,25,51,64,51,12,77,64,90,25,103,90,12,38,77,103,38,103,64,25,12,51,103,51,103,38,51,90,77,90,90,38,25,90,64,25,12,51,77,90,103,64,38,103,51,90,25,103,103,12,103,51,51,38,103,90,90,12,12,25,12,103,77,12];
+  var c = document.getElementById('citySilhouette');
+  for (var i = 0; i < heights.length; i++) {
+    var b = document.createElement('div');
+    b.className = 'bar';
+    b.style.height = heights[i] + 'px';
+    c.appendChild(b);
+  }
+})();
+
+/* ----- Pins generation ----- */
+(function buildPins () {
+  var track   = document.getElementById('pinsTrack');
+  /* track is 200% wide of the 1126.897 mask viewport = 2253.794 px. We place pins
+     in the first half (one panorama width) then DUPLICATE them at +50% for seamless loop. */
+  var halfW   = 1126.897;
+  var pinH    = [12, 25, 38, 51, 64, 77, 90, 103];
+  var icons   = [
+    'i-shield-check', 'i-building-2', 'i-briefcase-business',
+    'i-badge-dollar-sign', 'i-chart-column-increasing', 'i-battery-charging',
+    'i-ev-charger', 'i-file-text', 'i-network', 'i-square-activity'
+  ];
+
+  /* Seeded pseudo-random for deterministic layout */
+  var seed = 1337;
+  function rand() {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  }
+
+  var pinCount = 34;
+  /* Distribute evenly across the half-width with jitter */
+  var spacing = halfW / pinCount;
+
+  function makePin(xWithinHalf, side, idx) {
+    var pin = document.createElement('div');
+    pin.className = 'pin';
+    var lineH = pinH[Math.floor(rand() * pinH.length)];
+    var height = 56 + lineH + 12; /* circle + line + dot */
+    pin.style.height = height + 'px';
+    /* Bottom of pin sits in the lower-third of the mask (mask is 399 tall);
+       randomize Y so bottoms aren't all level — like the city silhouette. */
+    var bottomOffset = 60 + rand() * 200; /* offset from top of mask */
+    pin.style.top  = bottomOffset + 'px';
+    pin.style.left = (side * halfW + xWithinHalf) + 'px';
+
+    var circle = document.createElement('div');
+    circle.className = 'pin__circle';
+    /* random phase + duration */
+    var phase = (rand() * 3).toFixed(2);
+    var dur   = (2.2 + rand() * 1.8).toFixed(2);
+    circle.style.animationDelay    = '-' + phase + 's';
+    circle.style.animationDuration = dur + 's';
+
+    var iconId = icons[Math.floor(rand() * icons.length)];
+    circle.innerHTML = '<svg><use href="#' + iconId + '"/></svg>';
+
+    var line = document.createElement('div');
+    line.className = 'pin__line';
+    line.style.height = lineH + 'px';
+
+    var dot = document.createElement('div');
+    dot.className = 'pin__dot';
+    dot.style.top = (56 + lineH + 1) + 'px';
+
+    pin.appendChild(circle);
+    pin.appendChild(line);
+    pin.appendChild(dot);
+    return pin;
+  }
+
+  for (var i = 0; i < pinCount; i++) {
+    var jitter = (rand() - 0.5) * spacing * 0.7;
+    var x = spacing * (i + 0.5) + jitter;
+    /* Save current rand state to reuse identical params for the duplicate */
+    var stateBefore = seed;
+    track.appendChild(makePin(x, 0, i));
+    /* reset seed so duplicate uses the same icon / size / position offsets */
+    seed = stateBefore;
+    track.appendChild(makePin(x, 1, i));
+  }
+})();
+</script>
+
+</body>
+</html>
