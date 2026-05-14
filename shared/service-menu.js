@@ -7,18 +7,11 @@
   function render() {
     var concepts = window.PREVIEW_CONCEPTS || [];
     var current  = window.PREVIEW_CURRENT  || '';
-    var home     = window.PREVIEW_HOME     || '/';
     if (!concepts.length) return;
 
     var nav = document.createElement('nav');
     nav.className = 'service-menu';
     nav.setAttribute('aria-label', 'Concept navigator');
-
-    var homeLink = document.createElement('a');
-    homeLink.className = 'service-menu__home';
-    homeLink.href = home;
-    homeLink.textContent = '← Home';
-    nav.appendChild(homeLink);
 
     concepts.forEach(function (c) {
       if (c.id === current) {

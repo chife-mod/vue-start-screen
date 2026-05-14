@@ -540,10 +540,11 @@ resizeStage();
     var circle = document.createElement('div');
     circle.className = 'pin__circle';
     /* per-pin float params, applied via WAAPI below so line can stretch in sync */
-    var phase    = rand() * 3;          /* 0-3s phase offset */
-    var dur      = 2.2 + rand() * 1.8;  /* 2.2-4.0s period */
-    var floatUp  = 3 + rand() * 4;      /* 3-7px up from rest */
-    var floatDn  = 3 + rand() * 4;      /* 3-7px down from rest */
+    var phase    = rand() * 5;          /* 0-5s phase offset */
+    var dur      = 3 + rand() * 3;      /* 3-6s period — slower → smoother */
+    var floatUp  = 6 + rand() * 6;      /* 6-12px up from rest */
+    var floatDn  = 6 + rand() * 6;      /* 6-12px down — clamped below to keep line ≥6px */
+    floatDn      = Math.min(floatDn, lineH - 6);
 
     /* Blurred panorama bg — fakes "backdrop-blur" reliably even inside masks.
        Position the panorama image (2085×885) so the spot under the pin lands
@@ -581,7 +582,7 @@ resizeStage();
     /* Synced float: circle moves -floatUp..+floatDn; line top + height adjust
        so the line's BOTTOM stays fixed at (72+lineH) and the line's TOP keeps
        touching the circle's bottom. Dot is untouched (anchored to building). */
-    var timing = { duration: dur * 1000, delay: -phase * 1000, iterations: Infinity, easing: 'ease-in-out' };
+    var timing = { duration: dur * 1000, delay: -phase * 1000, iterations: Infinity, easing: 'cubic-bezier(0.4, 0, 0.6, 1)' };
     circle.animate([
       { transform: 'translate3d(0, ' + (-floatUp) + 'px, 0)' },
       { transform: 'translate3d(0, ' + ( floatDn) + 'px, 0)' },
