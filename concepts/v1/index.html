@@ -97,8 +97,9 @@ html, body {
   to   { transform: translate3d(-4170px, 0, 0); } /* one [O][M] unit */
 }
 
-/* Top fade only — the panorama feathers into bg at the top. The bottom transitions
-   naturally into the equalizer bars + footer, no harsh gradient. */
+/* Top + bottom fades — match Figma exactly: top 25.797%, bottom 22.491%.
+   The bottom fade softens the panorama's lower edge into the dark green page
+   bg so the water doesn't end abruptly. */
 .panorama-fade {
   position: absolute;
   top: 320px;
@@ -106,7 +107,9 @@ html, body {
   width: 1280px;
   height: 885px;
   pointer-events: none;
-  background: linear-gradient(180deg, rgb(2,22,23) 0%, rgba(2,22,23,0) 25.8%);
+  background:
+    linear-gradient(180deg, rgb(2,22,23) 0%, rgba(2,22,23,0) 25.797%),
+    linear-gradient(0deg,   rgb(2,22,23) 0%, rgba(2,22,23,0) 22.491%);
 }
 
 /* 2. Pins container — clipped by mask, sits between fade and glasses */
