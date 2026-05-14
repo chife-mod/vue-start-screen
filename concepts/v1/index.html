@@ -156,8 +156,8 @@ html, body {
   display: grid;
   place-items: center;
   overflow: hidden;
-  animation: pin-float 3s ease-in-out infinite;
   will-change: transform;
+  /* float animation now driven per-pin via WAAPI so the line can stretch in sync */
 }
 
 /* Green frosted-glass tint over the blur. Sits between blur-bg (z:0) and icon (z:2). */
@@ -183,11 +183,6 @@ html, body {
   filter: blur(16px);
   pointer-events: none;
   z-index: 0;
-}
-
-@keyframes pin-float {
-  0%, 100% { transform: translate3d(0, -3px, 0); }
-  50%      { transform: translate3d(0, 5px, 0); }
 }
 
 .pin__circle img {
@@ -536,19 +531,19 @@ resizeStage();
     var lineH = pinH[Math.floor(rand() * pinH.length)];
     var height = 72 + lineH + 12; /* circle + line + dot */
     pin.style.height = height + 'px';
-    /* Anchor pin bottom 70-100px above mask bottom — raised by 40px from the
-       original 30-60 to lift dots off the water onto the waterline/lower buildings. */
-    var bottomFromMaskBottom = 70 + rand() * 30;  /* dot bottom at lens Y 299-329 */
+    /* Anchor pin bottom 85-135px above mask bottom. Raised +15 from previous
+       70-100 base, randomization spread widened 30→50 so dots vary more. */
+    var bottomFromMaskBottom = 85 + rand() * 50;  /* dot bottom at lens Y 264-314 */
     pin.style.top  = (399 - height - bottomFromMaskBottom) + 'px';
     pin.style.left = (side * halfW + xWithinHalf) + 'px';
 
     var circle = document.createElement('div');
     circle.className = 'pin__circle';
-    /* random phase + duration */
-    var phase = (rand() * 3).toFixed(2);
-    var dur   = (2.2 + rand() * 1.8).toFixed(2);
-    circle.style.animationDelay    = '-' + phase + 's';
-    circle.style.animationDuration = dur + 's';
+    /* per-pin float params, applied via WAAPI below so line can stretch in sync */
+    var phase    = rand() * 3;          /* 0-3s phase offset */
+    var dur      = 2.2 + rand() * 1.8;  /* 2.2-4.0s period */
+    var floatUp  = 3 + rand() * 4;      /* 3-7px up from rest */
+    var floatDn  = 3 + rand() * 4;      /* 3-7px down from rest */
 
     /* Blurred panorama bg — fakes "backdrop-blur" reliably even inside masks.
        Position the panorama image (2085×885) so the spot under the pin lands
@@ -573,6 +568,7 @@ resizeStage();
     var line = document.createElement('div');
     line.className = 'pin__line';
     line.style.height = lineH + 'px';
+    line.style.top = '72px';
 
     var dot = document.createElement('div');
     dot.className = 'pin__dot';
@@ -581,6 +577,22 @@ resizeStage();
     pin.appendChild(circle);
     pin.appendChild(line);
     pin.appendChild(dot);
+
+    /* Synced float: circle moves -floatUp..+floatDn; line top + height adjust
+       so the line's BOTTOM stays fixed at (72+lineH) and the line's TOP keeps
+       touching the circle's bottom. Dot is untouched (anchored to building). */
+    var timing = { duration: dur * 1000, delay: -phase * 1000, iterations: Infinity, easing: 'ease-in-out' };
+    circle.animate([
+      { transform: 'translate3d(0, ' + (-floatUp) + 'px, 0)' },
+      { transform: 'translate3d(0, ' + ( floatDn) + 'px, 0)' },
+      { transform: 'translate3d(0, ' + (-floatUp) + 'px, 0)' }
+    ], timing);
+    line.animate([
+      { top: (72 - floatUp) + 'px', height: (lineH + floatUp) + 'px' },
+      { top: (72 + floatDn) + 'px', height: (lineH - floatDn) + 'px' },
+      { top: (72 - floatUp) + 'px', height: (lineH + floatUp) + 'px' }
+    ], timing);
+
     return pin;
   }
 
