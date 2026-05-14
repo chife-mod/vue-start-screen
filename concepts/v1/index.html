@@ -28,12 +28,18 @@ html, body {
   width: 100%;
 }
 
-/* Viewport-fitting stage: scales 1280x1280 to whatever viewport we have, preserving aspect ratio. */
+/* Viewport-fitting stage: scales 1280x1280 to whatever viewport we have, preserving aspect ratio.
+   Flexbox is more reliable than grid + place-items here — grid's place-items shorthand parsing
+   varies across browsers when keywords like "top center" are involved. */
 .stage-wrap {
   position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: start center;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   overflow: hidden;
   background: var(--bg);
 }
@@ -42,9 +48,10 @@ html, body {
   position: relative;
   width: var(--stage-w);
   height: var(--stage-h);
+  flex-shrink: 0;
   background: var(--bg);
-  transform-origin: top center;
-  /* dynamic scale set in JS based on viewport — origin top so scaled visual sticks to viewport top edge */
+  transform-origin: 50% 0%;
+  /* dynamic scale set in JS based on viewport — origin (50% 0) so visual sticks to viewport top and stays horizontally centered */
   overflow: hidden;
 }
 
@@ -90,7 +97,8 @@ html, body {
   to   { transform: translate3d(-4170px, 0, 0); } /* one [O][M] unit */
 }
 
-/* Top + bottom gradient fade (from Figma linear-gradient overlay on the panorama) */
+/* Top fade only — the panorama feathers into bg at the top. The bottom transitions
+   naturally into the equalizer bars + footer, no harsh gradient. */
 .panorama-fade {
   position: absolute;
   top: 320px;
@@ -98,9 +106,7 @@ html, body {
   width: 1280px;
   height: 885px;
   pointer-events: none;
-  background:
-    linear-gradient(180deg, rgb(2,22,23) 0%, rgba(2,22,23,0) 25.8%),
-    linear-gradient(0deg,   rgb(2,22,23) 0%, rgba(2,22,23,0) 22.5%);
+  background: linear-gradient(180deg, rgb(2,22,23) 0%, rgba(2,22,23,0) 25.8%);
 }
 
 /* 2. Pins container — clipped by mask, sits between fade and glasses */
@@ -344,7 +350,10 @@ html, body {
   white-space: nowrap;
 }
 
-/* Bottom city silhouette + footer */
+/* Bottom LED-equalizer — stacked segments (rgba blocks separated by gaps).
+   Each bar's height is animated via WAAPI so columns rise and fall like an old
+   analog equalizer responding to audio. The segmented look comes from a
+   repeating-linear-gradient inside each bar. */
 .city-silhouette {
   position: absolute;
   top: 1177px;
@@ -352,15 +361,23 @@ html, body {
   width: 1297px;
   height: 103px;
   display: flex;
-  gap: 1px;
+  gap: 4px;
   align-items: flex-end;
   pointer-events: none;
 }
 
 .city-silhouette .bar {
-  width: 10px;
-  background: rgba(121,251,186,0.30);
-  flex: 0 0 10px;
+  width: 13px;
+  flex: 0 0 13px;
+  /* Segments: 8px lit + 3px gap, repeating from bottom up. */
+  background: repeating-linear-gradient(
+    to top,
+    rgba(60, 130, 80, 0.92) 0px,
+    rgba(60, 130, 80, 0.92) 8px,
+    transparent 8px,
+    transparent 11px
+  );
+  will-change: height;
 }
 
 .footer {
@@ -488,15 +505,48 @@ function resizeStage () {
 window.addEventListener('resize', resizeStage);
 resizeStage();
 
-/* ----- City silhouette bars: replicate Figma 120 bars with the same height distribution ----- */
-(function buildCitySilhouette () {
-  var heights = [25,64,90,90,51,103,51,103,77,64,12,12,12,25,64,77,25,90,51,12,90,51,51,12,51,51,64,25,12,25,90,25,38,25,12,38,90,51,51,12,90,90,51,38,38,103,77,25,103,77,38,90,25,77,64,103,25,25,51,64,51,12,77,64,90,25,103,90,12,38,77,103,38,103,64,25,12,51,103,51,103,38,51,90,77,90,90,38,25,90,64,25,12,51,77,90,103,64,38,103,51,90,25,103,103,12,103,51,51,38,103,90,90,12,12,25,12,103,77,12];
+/* ----- LED equalizer bars: each column rises and falls independently ----- */
+(function buildEqualizer () {
   var c = document.getElementById('citySilhouette');
-  for (var i = 0; i < heights.length; i++) {
+  /* Container is 1297 wide. Each slot = 13 (bar) + 4 (gap) = 17 px → ~76 bars. */
+  var barCount = 76;
+  /* Snap heights to multiples of 11 (one segment = 8 + 3 gap) for clean LED look */
+  var segPx = 11;
+  var minSegs = 1;
+  var maxSegs = 9;  /* 9 segments × 11 = 99 px (just under 103 container height) */
+
+  function pickHeight() {
+    return (minSegs + Math.floor(Math.random() * (maxSegs - minSegs + 1))) * segPx;
+  }
+
+  for (var i = 0; i < barCount; i++) {
     var b = document.createElement('div');
     b.className = 'bar';
-    b.style.height = heights[i] + 'px';
+    var startH = pickHeight();
+    b.style.height = startH + 'px';
     c.appendChild(b);
+
+    /* Each bar pulses to 3 different random heights, with own phase + duration.
+       Snapped to segment multiples gives that "chunky LED" feel where columns
+       jump segment-by-segment rather than smoothly slide. ease-in-out softens
+       the jumps without losing the analog-equalizer character. */
+    var h1 = pickHeight();
+    var h2 = pickHeight();
+    var h3 = pickHeight();
+    var dur = 1800 + Math.random() * 2400;   /* 1.8-4.2s per cycle */
+    var delay = -Math.random() * dur;         /* random phase offset */
+    b.animate([
+      { height: startH + 'px' },
+      { height: h1 + 'px' },
+      { height: h2 + 'px' },
+      { height: h3 + 'px' },
+      { height: startH + 'px' }
+    ], {
+      duration: dur,
+      delay: delay,
+      iterations: Infinity,
+      easing: 'cubic-bezier(0.4, 0, 0.6, 1)'
+    });
   }
 })();
 
