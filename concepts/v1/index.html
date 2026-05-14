@@ -97,9 +97,8 @@ html, body {
   to   { transform: translate3d(-4170px, 0, 0); } /* one [O][M] unit */
 }
 
-/* Top + bottom fades — match Figma exactly: top 25.797%, bottom 22.491%.
-   The bottom fade softens the panorama's lower edge into the dark green page
-   bg so the water doesn't end abruptly. */
+/* Top + bottom fade only: solid bg color → transparent. Smooth transition
+   from dark page bg into the panorama on top and bottom edges. */
 .panorama-fade {
   position: absolute;
   top: 320px;
@@ -323,24 +322,17 @@ html, body {
   gap: 16px;
 }
 
+/* Inline SVG icons — vector-effect:non-scaling-stroke + stroke-width=1 gives
+   exactly 1 CSS-px stroke regardless of viewBox scaling. Stroke color = yellow. */
 .brand-strip .brand-icon {
   width: 40px;
   height: 40px;
   flex: 0 0 40px;
-  background-color: var(--yellow);
-  -webkit-mask-position: center;
-          mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-          mask-repeat: no-repeat;
-  -webkit-mask-size: 28px 28px; /* icon body 24×24 scaled to 28 inside 40 box, matching Figma inset ~12.5% */
-          mask-size: 28px 28px;
+  display: block;
+  stroke: var(--green);
+  fill: none;
 }
-
-.brand-icon--portfolio  { -webkit-mask-image: url(../../assets/lucide/lucide_building-2.svg);              mask-image: url(../../assets/lucide/lucide_building-2.svg); }
-.brand-icon--compliance { -webkit-mask-image: url(../../assets/lucide/lucide_shield-check.svg);            mask-image: url(../../assets/lucide/lucide_shield-check.svg); }
-.brand-icon--projects   { -webkit-mask-image: url(../../assets/lucide/lucide_briefcase-business.svg);      mask-image: url(../../assets/lucide/lucide_briefcase-business.svg); }
-.brand-icon--incentives { -webkit-mask-image: url(../../assets/lucide/lucide_badge-dollar-sign.svg);       mask-image: url(../../assets/lucide/lucide_badge-dollar-sign.svg); }
-.brand-icon--insights   { -webkit-mask-image: url(../../assets/lucide/lucide_chart-column-increasing.svg); mask-image: url(../../assets/lucide/lucide_chart-column-increasing.svg); }
+.brand-strip .brand-icon path { vector-effect: non-scaling-stroke; }
 
 .brand-strip span {
   font-family: "Inter", sans-serif;
@@ -367,6 +359,12 @@ html, body {
   gap: 4px;
   align-items: flex-end;
   pointer-events: none;
+  /* Horizontal mask on the equalizer ONLY — fades bars to invisible at the
+     edges, holds at 70% opacity across the 25-75% center band. The panorama
+     + page bg show through behind, so no overlay plate is needed and there's
+     no horizontal seam where a plate would end. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.3) 25%, rgba(0,0,0,0.3) 75%, transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.3) 25%, rgba(0,0,0,0.3) 75%, transparent 100%);
 }
 
 .city-silhouette .bar {
@@ -389,8 +387,9 @@ html, body {
   left: 0;
   width: 1278px;
   height: 132px;
-  background: linear-gradient(180deg, rgba(2,22,23,0.6) 0%, rgba(2,22,23,1) 60%);
+  background: none;
 }
+
 
 .footer-text {
   position: absolute;
@@ -452,26 +451,41 @@ html, body {
     <div class="subtitle">Building Intelligence Platform</div>
     <div class="tagline">Your buildings. Your compliance. Your control.</div>
 
-    <!-- 7. Brand strip -->
+    <!-- 7. Brand strip — inline lucide icons, 1px stroke via non-scaling-stroke -->
     <div class="brand-strip">
       <div class="brand-item">
-        <div class="brand-icon brand-icon--portfolio"></div>
+        <svg class="brand-icon" viewBox="0 0 24 24" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 12H14M10 8H14M14 21V18C14 17.4696 13.7893 16.9609 13.4142 16.5858C13.0391 16.2107 12.5304 16 12 16C11.4696 16 10.9609 16.2107 10.5858 16.5858C10.2107 16.9609 10 17.4696 10 18V21"/>
+          <path d="M6 10H4C3.46957 10 2.96086 10.2107 2.58579 10.5858C2.21071 10.9609 2 11.4696 2 12V19C2 19.5304 2.21071 20.0391 2.58579 20.4142C2.96086 20.7893 3.46957 21 4 21H20C20.5304 21 21.0391 20.7893 21.4142 20.4142C21.7893 20.0391 22 19.5304 22 19V9C22 8.46957 21.7893 7.96086 21.4142 7.58579C21.0391 7.21071 20.5304 7 20 7H18"/>
+          <path d="M6 21V5C6 4.46957 6.21071 3.96086 6.58579 3.58579C6.96086 3.21071 7.46957 3 8 3H16C16.5304 3 17.0391 3.21071 17.4142 3.58579C17.7893 3.96086 18 4.46957 18 5V21"/>
+        </svg>
         <span>Portfolio</span>
       </div>
       <div class="brand-item">
-        <div class="brand-icon brand-icon--compliance"></div>
+        <svg class="brand-icon" viewBox="0 0 24 24" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 13C20 18 16.5 20.5 12.34 21.95C12.1222 22.0238 11.8855 22.0203 11.67 21.94C7.5 20.5 4 18 4 13V5.99999C4 5.73478 4.10536 5.48042 4.29289 5.29289C4.48043 5.10535 4.73478 4.99999 5 4.99999C7 4.99999 9.5 3.79999 11.24 2.27999C11.4519 2.09899 11.7214 1.99954 12 1.99954C12.2786 1.99954 12.5481 2.09899 12.76 2.27999C14.51 3.80999 17 4.99999 19 4.99999C19.2652 4.99999 19.5196 5.10535 19.7071 5.29289C19.8946 5.48042 20 5.73478 20 5.99999V13Z"/>
+          <path d="M9 12L11 14L15 10"/>
+        </svg>
         <span>Compliance</span>
       </div>
       <div class="brand-item">
-        <div class="brand-icon brand-icon--projects"></div>
+        <svg class="brand-icon" viewBox="0 0 24 24" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 12H12.01M16 6V4C16 3.46957 15.7893 2.96086 15.4142 2.58579C15.0391 2.21071 14.5304 2 14 2H10C9.46957 2 8.96086 2.21071 8.58579 2.58579C8.21071 2.96086 8 3.46957 8 4V6M22 13C19.0328 14.959 15.5555 16.0033 12 16.0033C8.44445 16.0033 4.96721 14.959 2 13"/>
+          <path d="M20 6H4C2.89543 6 2 6.89543 2 8V18C2 19.1046 2.89543 20 4 20H20C21.1046 20 22 19.1046 22 18V8C22 6.89543 21.1046 6 20 6Z"/>
+        </svg>
         <span>Projects</span>
       </div>
       <div class="brand-item">
-        <div class="brand-icon brand-icon--incentives"></div>
+        <svg class="brand-icon" viewBox="0 0 24 24" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3.84995 8.62001C3.70399 7.96253 3.7264 7.27885 3.91511 6.63235C4.10381 5.98584 4.4527 5.39745 4.92942 4.92173C5.40614 4.446 5.99526 4.09835 6.64216 3.911C7.28905 3.72365 7.97278 3.70267 8.62995 3.85001C8.99166 3.28431 9.48995 2.81876 10.0789 2.49629C10.6678 2.17382 11.3285 2.00479 11.9999 2.00479C12.6714 2.00479 13.332 2.17382 13.921 2.49629C14.5099 2.81876 15.0082 3.28431 15.3699 3.85001C16.0281 3.70203 16.713 3.72292 17.3609 3.91072C18.0089 4.09852 18.5988 4.44715 19.0758 4.92416C19.5528 5.40117 19.9014 5.99108 20.0892 6.63901C20.277 7.28694 20.2979 7.97184 20.1499 8.63001C20.7156 8.99171 21.1812 9.49001 21.5037 10.079C21.8261 10.6679 21.9952 11.3286 21.9952 12C21.9952 12.6715 21.8261 13.3321 21.5037 13.9211C21.1812 14.51 20.7156 15.0083 20.1499 15.37C20.2973 16.0272 20.2763 16.7109 20.089 17.3578C19.9016 18.0047 19.554 18.5938 19.0782 19.0705C18.6025 19.5473 18.0141 19.8961 17.3676 20.0848C16.7211 20.2736 16.0374 20.296 15.3799 20.15C15.0187 20.7179 14.52 21.1854 13.9301 21.5093C13.3401 21.8332 12.678 22.0031 12.0049 22.0031C11.3319 22.0031 10.6698 21.8332 10.0798 21.5093C9.48987 21.1854 8.99119 20.7179 8.62995 20.15C7.97278 20.2973 7.28905 20.2764 6.64216 20.089C5.99526 19.9017 5.40614 19.554 4.92942 19.0783C4.4527 18.6026 4.10381 18.0142 3.91511 17.3677C3.7264 16.7212 3.70399 16.0375 3.84995 15.38C3.27991 15.0192 2.81036 14.5202 2.485 13.9292C2.15963 13.3383 1.98901 12.6746 1.98901 12C1.98901 11.3254 2.15963 10.6617 2.485 10.0708C2.81036 9.47983 3.27991 8.98076 3.84995 8.62001Z"/>
+          <path d="M16 8H10C9.46957 8 8.96086 8.21071 8.58579 8.58579C8.21071 8.96086 8 9.46957 8 10C8 10.5304 8.21071 11.0391 8.58579 11.4142C8.96086 11.7893 9.46957 12 10 12H14C14.5304 12 15.0391 12.2107 15.4142 12.5858C15.7893 12.9609 16 13.4696 16 14C16 14.5304 15.7893 15.0391 15.4142 15.4142C15.0391 15.7893 14.5304 16 14 16H8M12 18V6"/>
+        </svg>
         <span>Incentives</span>
       </div>
       <div class="brand-item">
-        <div class="brand-icon brand-icon--insights"></div>
+        <svg class="brand-icon" viewBox="0 0 24 24" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M13 17V9M18 17V5M3 3V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H21M8 17V14"/>
+        </svg>
         <span>Insights</span>
       </div>
     </div>
@@ -536,7 +550,7 @@ resizeStage();
     var h1 = pickHeight();
     var h2 = pickHeight();
     var h3 = pickHeight();
-    var dur = 1800 + Math.random() * 2400;   /* 1.8-4.2s per cycle */
+    var dur = 5400 + Math.random() * 7200;   /* 5.4-12.6s per cycle (+50% slower) */
     var delay = -Math.random() * dur;         /* random phase offset */
     b.animate([
       { height: startH + 'px' },
